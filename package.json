@@ -1,0 +1,10 @@
+{
+  "name": "angleprobe",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check popup.js && node --check options.js && for file in lib/*.js test/*.js; do node --check \"$file\"; done"
+  }
+}

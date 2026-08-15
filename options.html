@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Angleprobe settings</title>
+    <link rel="stylesheet" href="options.css">
+  </head>
+  <body>
+    <main class="settings-shell">
+      <header>
+        <img src="icons/icon48.png" alt="" width="44" height="44">
+        <div><h1>Angleprobe settings</h1><p>Your key, model, privacy, and appearance.</p></div>
+      </header>
+
+      <form id="settingsForm">
+        <section class="settings-card">
+          <div class="section-title"><div><h2>OpenRouter</h2><p>Requests go directly from this extension to OpenRouter.</p></div><a href="https://openrouter.ai/settings/keys" target="_blank" rel="noreferrer">Create a key</a></div>
+          <label for="apiKey">API key</label>
+          <div class="inline-row">
+            <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-or-v1-…">
+            <button id="toggleKeyButton" class="secondary-button" type="button">Show</button>
+            <button id="clearKeyButton" class="secondary-button" type="button">Clear</button>
+          </div>
+          <p class="field-help">Stored only in Chrome's local extension storage on this device. For safety, create a dedicated key with an OpenRouter spending limit.</p>
+        </section>
+
+        <section class="settings-card">
+          <div class="section-title"><div><h2>Model</h2><p>Only current text models advertising structured outputs are shown.</p></div><button id="refreshModelsButton" class="secondary-button" type="button">Refresh models</button></div>
+          <label for="modelFilter">Filter models</label>
+          <input id="modelFilter" type="search" placeholder="Search by model or provider">
+          <label for="modelSelect">Selected model</label>
+          <select id="modelSelect"><option value="">Loading models…</option></select>
+          <p id="modelMeta" class="field-help"></p>
+
+          <label for="reasoningEffort">Reasoning effort</label>
+          <select id="reasoningEffort"><option value="default">Model default</option></select>
+          <p id="reasoningHelp" class="field-help">Updated from the model's current capabilities.</p>
+        </section>
+
+        <section class="settings-card">
+          <h2>Privacy</h2>
+          <label class="check-row" for="requireZdr">
+            <input id="requireZdr" type="checkbox" checked>
+            <span><strong>Require zero-data-retention routing</strong><small>Restricts each request to ZDR endpoints and denies provider data collection. Some models may then be unavailable.</small></span>
+          </label>
+        </section>
+
+        <section class="settings-card">
+          <h2>Appearance</h2>
+          <label for="theme">Theme</label>
+          <select id="theme">
+            <option value="system">Follow system</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </section>
+
+        <div id="statusMessage" class="status-message" role="status" aria-live="polite"></div>
+        <button class="primary-button save-button" type="submit">Save settings</button>
+      </form>
+
+      <footer>Open source · No Angleprobe account · No Angleprobe server</footer>
+    </main>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>
