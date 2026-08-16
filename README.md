@@ -11,6 +11,7 @@ It uses your own OpenRouter API key. There is no Angleprobe backend, user accoun
 - Light, dark, and system themes.
 - Fetches OpenRouter's current text models and shows only models advertising structured-output support.
 - Builds reasoning-effort choices from each model's current metadata.
+- Uses OpenRouter response healing and local safety normalization to improve compatibility across model providers.
 - Optional zero-data-retention requirement, enabled by default.
 - Optional OpenRouter Web Search and Web Fetch verification for material factual and statistical claims.
 - Friendly errors for invalid keys, insufficient credit, rate limits, incompatible models, unavailable ZDR routes, timeouts, and provider failures.

@@ -86,6 +86,8 @@ test("analysis sends the user's key, model, reasoning, ZDR, and strict schema on
   });
   assert.equal(body.response_format.type, "json_schema");
   assert.equal(body.response_format.json_schema.strict, true);
+  assert.deepEqual(body.plugins, [{ id: "response-healing" }]);
+  assert.equal(body.max_tokens, 8_000);
   assert.equal("tools" in body, false);
   assert.equal("neutral_rewrite" in body.response_format.json_schema.schema.properties, false);
   assert.equal(result.analysis.issues[0].location.start, 14);
@@ -201,6 +203,36 @@ test("a fenced JSON response is safely parsed and still schema-validated", async
     fetchStub,
   );
   assert.equal(result.analysis.overall_assessment, "potential_concerns_found");
+});
+
+test("a JSON object surrounded by provider commentary is safely extracted", async () => {
+  const fetchStub = async () => rawModelResponse(
+    `Here is the requested analysis:\n${JSON.stringify(analysisOutput)}\nDone.`,
+  );
+  const result = await analyseWithOpenRouter(
+    { text: "This approach always works for 20 people." },
+    preferences,
+    fetchStub,
+  );
+  assert.equal(result.analysis.issues.length, 1);
+});
+
+test("a completion exhausted by reasoning gets a specific recoverable error", async () => {
+  const fetchStub = async () => jsonResponse({
+    choices: [{ finish_reason: "length", message: { content: null } }],
+  });
+  await assert.rejects(
+    analyseWithOpenRouter({ text: "Some text" }, preferences, fetchStub),
+    (error) => error instanceof AngleprobeError && error.code === "completion_limit",
+  );
+});
+
+test("a non-JSON provider gateway failure is classified as temporary unavailability", async () => {
+  const fetchStub = async () => new Response("gateway timeout", { status: 504 });
+  await assert.rejects(
+    analyseWithOpenRouter({ text: "Some text" }, preferences, fetchStub),
+    (error) => error instanceof AngleprobeError && error.code === "openrouter_unavailable",
+  );
 });
 
 function modelResponse(output, annotations = []) {
