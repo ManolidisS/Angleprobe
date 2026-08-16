@@ -35,11 +35,11 @@ Angleprobe reads only the text you selected, and only after you open the extensi
 
 With **Require zero data retention** enabled, requests include OpenRouter's ZDR and data-collection-denial routing preferences. A model can become unavailable when no compatible ZDR endpoint exists; Angleprobe reports that condition and lets you choose another model. Turning the option off broadens provider availability and makes the provider's own retention policy applicable.
 
-Web verification is off by default. When enabled, Angleprobe gives a tool-capable model access to OpenRouter's beta `openrouter:web_search` and `openrouter:web_fetch` server tools and displays returned citations. These tools may add charges. OpenRouter states that inference ZDR does not cover separately enabled plugins or tools, which may use third parties with their own retention policies.
+Web verification is off by default. When enabled, Angleprobe first runs a plain-text research request with OpenRouter's beta `openrouter:web_search` and `openrouter:web_fetch` server tools, then supplies those notes to a separate strict structured-analysis request. Returned citations are displayed with the result. These tools may add charges. OpenRouter states that inference ZDR does not cover separately enabled plugins or tools, which may use third parties with their own retention policies.
 
 The API key, settings, cached model list, active selection, and latest result are stored locally. **Reset** clears the active selection and result; **Clear saved key** removes the key. Uninstalling the extension removes its local data.
 
-See [PRIVACY-POLICY-TEMPLATE.md](PRIVACY-POLICY-TEMPLATE.md) before publishing a store listing.
+See [PRIVACY-POLICY-TEMPLATE.md](PRIVACY-POLICY-TEMPLATE.md) for the project's data-handling disclosure template.
 
 ## Development
 
@@ -51,10 +51,6 @@ npm run check
 ```
 
 The extension uses Manifest V3 and requests only `activeTab`, `scripting`, `storage`, and host access to `https://openrouter.ai/*`.
-
-## Chrome Web Store
-
-Upload a ZIP whose root contains `manifest.json`. The separately produced `angleprobe-chrome-store.zip` is ready in that shape. Complete the store's privacy disclosures, host a completed privacy policy at a stable URL, add screenshots, and review the listing copy in [STORE-LISTING.md](STORE-LISTING.md).
 
 ## Contributing and security
 

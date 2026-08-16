@@ -92,14 +92,19 @@ test("analysis sends the user's key, model, reasoning, ZDR, and strict schema on
   assert.equal(result.usage.requests, 1);
 });
 
-test("web verification sends OpenRouter search/fetch tools and captures citations", async () => {
-  let requestBody;
+test("web verification researches first, then performs a separate structured analysis", async () => {
+  const requests = [];
   const fetchStub = async (_url, options) => {
-    requestBody = JSON.parse(options.body);
-    return modelResponse(analysisOutput, [{
-      type: "url_citation",
-      url_citation: { url: "https://example.com/evidence", title: "Primary evidence" },
-    }]);
+    requests.push(JSON.parse(options.body));
+    if (requests.length === 1) {
+      return rawModelResponse([
+        { type: "text", text: "A primary source supports the reported figure." },
+      ], [{
+        type: "url_citation",
+        url_citation: { url: "https://example.com/evidence", title: "Primary evidence" },
+      }]);
+    }
+    return modelResponse(analysisOutput);
   };
 
   const result = await analyseWithOpenRouter(
@@ -113,13 +118,20 @@ test("web verification sends OpenRouter search/fetch tools and captures citation
     fetchStub,
   );
 
-  assert.deepEqual(requestBody.tools.map((tool) => tool.type), [
+  assert.equal(requests.length, 2);
+  assert.deepEqual(requests[0].tools.map((tool) => tool.type), [
     "openrouter:web_search",
     "openrouter:web_fetch",
   ]);
+  assert.equal("response_format" in requests[0], false);
+  assert.equal("tools" in requests[1], false);
+  assert.equal(requests[1].response_format.type, "json_schema");
+  assert.match(requests[1].messages[1].content, /primary source supports/i);
   assert.equal(result.web_verification, true);
   assert.deepEqual(result.sources, [{ url: "https://example.com/evidence", title: "Primary evidence" }]);
   assert.equal(result.input.capture_mode, "page");
+  assert.equal(result.usage.requests, 2);
+  assert.deepEqual(result.usage.by_stage.map((stage) => stage.stage), ["web_research", "analysis"]);
 });
 
 test("web verification fails locally for a model without tool support", async () => {
@@ -181,10 +193,24 @@ test("invalid structured output is rejected before display", async () => {
   );
 });
 
+test("a fenced JSON response is safely parsed and still schema-validated", async () => {
+  const fetchStub = async () => rawModelResponse(`\`\`\`json\n${JSON.stringify(analysisOutput)}\n\`\`\``);
+  const result = await analyseWithOpenRouter(
+    { text: "This approach always works for 20 people." },
+    preferences,
+    fetchStub,
+  );
+  assert.equal(result.analysis.overall_assessment, "potential_concerns_found");
+});
+
 function modelResponse(output, annotations = []) {
+  return rawModelResponse(JSON.stringify(output), annotations);
+}
+
+function rawModelResponse(content, annotations = []) {
   return jsonResponse({
     model: "provider/resolved-model",
-    choices: [{ message: { content: JSON.stringify(output), annotations } }],
+    choices: [{ message: { content, annotations } }],
     usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
   });
 }

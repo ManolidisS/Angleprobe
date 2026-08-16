@@ -2,7 +2,7 @@
 
 **Effective date:** [DATE]
 
-Replace the bracketed owner/contact fields, publish this policy at a stable public URL, and verify that it still matches the released code and your jurisdiction before submitting Angleprobe to an extension store.
+Replace the bracketed owner/contact fields and verify that this document still matches the released code and your jurisdiction before relying on it as a public policy.
 
 ## What Angleprobe does
 
@@ -18,7 +18,7 @@ Angleprobe's maintainers do not receive or store the API key, selected text, ana
 
 ## Web verification
 
-Web verification is disabled by default. If the user enables it, the selected model may invoke OpenRouter Web Search and Web Fetch to check material factual or statistical claims. Search queries, URLs, and retrieved content may be processed by OpenRouter and third-party tool providers. Returned citation URLs and titles are stored locally with the latest analysis. Web tools can incur additional charges.
+Web verification is disabled by default. If the user enables it, Angleprobe first makes a research request in which the selected model may invoke OpenRouter Web Search and Web Fetch to check material factual or statistical claims. It then sends the resulting research notes with the original text in a separate structured-analysis request. Search queries, URLs, retrieved content, and research notes may be processed by OpenRouter and third-party tool providers. Returned citation URLs and titles are stored locally with the latest analysis. Web tools and the additional model request can incur extra charges.
 
 ## Zero-data-retention option
 
