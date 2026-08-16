@@ -42,8 +42,14 @@
           <h2>Privacy</h2>
           <label class="check-row" for="requireZdr">
             <input id="requireZdr" type="checkbox" checked>
-            <span><strong>Require zero-data-retention routing</strong><small>Restricts each request to ZDR endpoints and denies provider data collection. Some models may then be unavailable.</small></span>
+            <span><strong>Require zero-data-retention inference</strong><small>Restricts model inference to ZDR endpoints and denies provider data collection. Some models may then be unavailable.</small></span>
           </label>
+          <label class="check-row" for="enableWebVerification">
+            <input id="enableWebVerification" type="checkbox">
+            <span><strong>Verify material claims with web tools (beta)</strong><small>Lets the model use OpenRouter Web Search and Web Fetch when statistics or factual claims need checking. This can add cost.</small></span>
+          </label>
+          <p id="webVerificationHelp" class="field-help"></p>
+          <p class="privacy-warning">ZDR covers model-provider inference only. Enabled search and fetch tools may use third-party services with their own retention policies.</p>
         </section>
 
         <section class="settings-card">

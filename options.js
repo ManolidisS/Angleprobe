@@ -8,6 +8,7 @@ const CATALOG_MAX_AGE_MS = 6 * 60 * 60 * 1_000;
 const elements = {
   apiKey: document.querySelector("#apiKey"),
   clearKey: document.querySelector("#clearKeyButton"),
+  enableWebVerification: document.querySelector("#enableWebVerification"),
   form: document.querySelector("#settingsForm"),
   modelFilter: document.querySelector("#modelFilter"),
   modelMeta: document.querySelector("#modelMeta"),
@@ -19,6 +20,7 @@ const elements = {
   status: document.querySelector("#statusMessage"),
   theme: document.querySelector("#theme"),
   toggleKey: document.querySelector("#toggleKeyButton"),
+  webVerificationHelp: document.querySelector("#webVerificationHelp"),
 };
 
 let catalog = [];
@@ -58,14 +60,20 @@ elements.form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const apiKey = elements.apiKey.value.trim();
   const modelId = elements.modelSelect.value;
+  const selectedModel = catalog.find((model) => model.id === modelId);
   if (!apiKey) return showStatus("Enter your OpenRouter API key.", "error");
   if (!modelId) return showStatus("Choose a model after the model list finishes loading.", "error");
+  if (elements.enableWebVerification.checked && !selectedModel?.supportedParameters?.includes("tools")) {
+    return showStatus("Choose a model that advertises tool support before enabling web verification.", "error");
+  }
 
   await chrome.storage.local.set({
     apiKey,
     modelId,
+    modelSupportsTools: Boolean(selectedModel?.supportedParameters?.includes("tools")),
     reasoningEffort: elements.reasoningEffort.value,
     requireZdr: elements.requireZdr.checked,
+    enableWebVerification: elements.enableWebVerification.checked,
     theme: elements.theme.value,
   });
   savedModelId = modelId;
@@ -86,6 +94,7 @@ async function initialise() {
 
   elements.apiKey.value = preferences.apiKey;
   elements.requireZdr.checked = preferences.requireZdr;
+  elements.enableWebVerification.checked = preferences.enableWebVerification;
   elements.theme.value = preferences.theme;
   savedModelId = preferences.modelId;
   savedReasoningEffort = preferences.reasoningEffort;
@@ -116,7 +125,12 @@ async function refreshModels(skipNetwork) {
       selected = chooseDefaultModel(catalog);
       if (previous) {
         savedReasoningEffort = "default";
-        await chrome.storage.local.set({ modelId: selected, reasoningEffort: "default" });
+        const replacement = catalog.find((model) => model.id === selected);
+        await chrome.storage.local.set({
+          modelId: selected,
+          modelSupportsTools: Boolean(replacement?.supportedParameters?.includes("tools")),
+          reasoningEffort: "default",
+        });
         showStatus("The previous model is no longer compatible. Angleprobe selected a current alternative; review and save Settings.", "info");
       } else {
         showStatus(`Loaded ${catalog.length} compatible models. Choose one and save Settings.`, "success");
@@ -183,6 +197,12 @@ function updateModelDetails(preferredEffort) {
   elements.reasoningHelp.textContent = efforts.length
     ? "Choices come from the current OpenRouter model metadata."
     : "This model does not advertise configurable reasoning.";
+
+  const supportsTools = model.supportedParameters?.includes("tools");
+  elements.webVerificationHelp.textContent = supportsTools
+    ? "This model advertises tool support. Search/fetch costs are charged by OpenRouter."
+    : "This model does not advertise tool support; web verification cannot be enabled with it.";
+  elements.webVerificationHelp.classList.toggle("warning", !supportsTools);
 
   const desired = preferredEffort ?? elements.reasoningEffort.value;
   elements.reasoningEffort.value = [...elements.reasoningEffort.options].some((option) => option.value === desired)

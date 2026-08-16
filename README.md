@@ -1,18 +1,20 @@
 # Angleprobe
 
-Angleprobe is an open-source Chrome extension that analyses text you deliberately highlight for framing, statistical problems, unsupported implications, and missing context.
+Angleprobe is an open-source Chrome extension that analyses text you deliberately highlight—or the readable text of the current page—for framing, statistical problems, unsupported implications, and missing context.
 
 It uses your own OpenRouter API key. There is no Angleprobe backend, user account, subscription, shared key, telemetry service, or Angleprobe-hosted database.
 
 ## Features
 
 - Keeps the current selection and analysis when the popup closes; **Reset** starts fresh.
+- Analyses a selection or extracts readable text from the current page without sending raw HTML.
 - Light, dark, and system themes.
 - Fetches OpenRouter's current text models and shows only models advertising structured-output support.
 - Builds reasoning-effort choices from each model's current metadata.
 - Optional zero-data-retention requirement, enabled by default.
+- Optional OpenRouter Web Search and Web Fetch verification for material factual and statistical claims.
 - Friendly errors for invalid keys, insufficient credit, rate limits, incompatible models, unavailable ZDR routes, timeouts, and provider failures.
-- Validates model output before display and independently audits neutral rewrites.
+- Validates structured model output before display and surfaces returned source citations.
 
 ## Install locally
 
@@ -25,13 +27,15 @@ It uses your own OpenRouter API key. There is no Angleprobe backend, user accoun
 
 Create a dedicated OpenRouter key with a sensible spending limit. The key is stored in `chrome.storage.local` in your browser and sent only to OpenRouter; it is never sent to an Angleprobe service.
 
-To use Angleprobe, highlight text on a normal webpage, open the extension, and click **Analyse selection**.
+To use Angleprobe, highlight text on a normal webpage, open the extension, and click **Analyse text**. Alternatively, click **Analyse page** to extract and analyse the current page's readable article or main content. There is no fixed character limit; if the text exceeds the selected model's context window, Angleprobe explains the problem so you can choose a longer-context model or a smaller passage.
 
 ## Privacy and data flow
 
 Angleprobe reads only the text you selected, and only after you open the extension. On analysis, the selected text and Angleprobe's prompts go directly to OpenRouter and the provider OpenRouter routes the request to.
 
 With **Require zero data retention** enabled, requests include OpenRouter's ZDR and data-collection-denial routing preferences. A model can become unavailable when no compatible ZDR endpoint exists; Angleprobe reports that condition and lets you choose another model. Turning the option off broadens provider availability and makes the provider's own retention policy applicable.
+
+Web verification is off by default. When enabled, Angleprobe gives a tool-capable model access to OpenRouter's beta `openrouter:web_search` and `openrouter:web_fetch` server tools and displays returned citations. These tools may add charges. OpenRouter states that inference ZDR does not cover separately enabled plugins or tools, which may use third parties with their own retention policies.
 
 The API key, settings, cached model list, active selection, and latest result are stored locally. **Reset** clears the active selection and result; **Clear saved key** removes the key. Uninstalling the extension removes its local data.
 

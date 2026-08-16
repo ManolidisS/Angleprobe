@@ -127,14 +127,15 @@ button { font: inherit; }
 .selection-hint { margin: 0; padding: 22px 14px; border: 1px dashed var(--hint-line); border-radius: 12px; color: var(--muted); text-align: center; font-size: 13px; }
 .selection-hint[hidden] { display: none; }
 
+.action-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin: 4px 18px 14px; }
 .primary-button {
   display: flex;
-  width: calc(100% - 36px);
+  width: 100%;
   min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin: 4px 18px 14px;
+  margin: 0;
   border: 0;
   border-radius: 11px;
   background: var(--green-600);
@@ -146,6 +147,9 @@ button { font: inherit; }
 .primary-button:hover:not(:disabled) { background: var(--green-700); }
 .primary-button:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
 .primary-button.loading .spinner { display: block; }
+.secondary-button { min-height: 44px; padding: 0 13px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); color: var(--ink); font-weight: 700; cursor: pointer; }
+.secondary-button:hover:not(:disabled) { background: var(--control-hover); }
+.secondary-button:disabled { opacity: .5; cursor: not-allowed; }
 .spinner { display: none; width: 15px; height: 15px; border: 2px solid rgba(255,255,255,.45); border-top-color: white; border-radius: 50%; animation: spin .75s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -180,10 +184,10 @@ button { font: inherit; }
 .issue-explanation, .context-card p { margin: 0; color: var(--body-copy); font-size: 12px; line-height: 1.5; }
 .context-card h3 { margin: 0 0 5px; font-size: 12px; }
 
-.rewrite-card { position: relative; padding: 13px 60px 13px 13px; border-left: 3px solid var(--green-500); }
-.rewrite-card p { margin: 0; font-size: 13px; line-height: 1.5; }
-.text-button { position: absolute; top: 9px; right: 9px; border: 0; border-radius: 7px; padding: 6px 8px; background: var(--green-100); color: var(--green-700); font-size: 11px; font-weight: 700; cursor: pointer; }
-.text-button:hover { background: var(--green-100); }
+.sources-card { padding: 11px 13px; }
+.sources-card ul { margin: 0; padding-left: 18px; }
+.sources-card li { margin: 5px 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.sources-card a { color: var(--blue); overflow-wrap: anywhere; }
 
 .limitations-card { padding: 0 13px; }
 .limitations-card summary { padding: 12px 0; color: var(--muted); font-size: 12px; cursor: pointer; }

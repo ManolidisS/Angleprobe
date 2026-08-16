@@ -1,43 +1,44 @@
 import { AngleprobeError, analyseWithOpenRouter } from "./lib/openrouter-client.js";
 import { applyTheme, followSystemTheme, getPreferences } from "./lib/preferences.js";
 
-const MAX_TEXT_LENGTH = 5_000;
-const ACTIVE_TEXT_KEY = "activeText";
+const ACTIVE_CAPTURE_KEY = "activeCapture";
 const ACTIVE_ANALYSIS_KEY = "activeAnalysis";
+const LEGACY_TEXT_KEY = "activeText";
 
 const elements = {
   analyseButton: document.querySelector("#analyseButton"),
+  analysePageButton: document.querySelector("#analysePageButton"),
   assessmentBadge: document.querySelector("#assessmentBadge"),
   characterCount: document.querySelector("#characterCount"),
   contextList: document.querySelector("#contextList"),
   contextSection: document.querySelector("#contextSection"),
-  copyRewriteButton: document.querySelector("#copyRewriteButton"),
+  errorSettingsButton: document.querySelector("#errorSettingsButton"),
   issueCount: document.querySelector("#issueCount"),
   issuesList: document.querySelector("#issuesList"),
   issuesSection: document.querySelector("#issuesSection"),
   limitationsList: document.querySelector("#limitationsList"),
   limitationsSection: document.querySelector("#limitationsSection"),
   modelMeta: document.querySelector("#modelMeta"),
-  neutralRewrite: document.querySelector("#neutralRewrite"),
   overview: document.querySelector("#overview"),
   results: document.querySelector("#results"),
-  rewriteSection: document.querySelector("#rewriteSection"),
   resetButton: document.querySelector("#resetButton"),
+  selectionHeading: document.querySelector("#selectionHeading"),
   selectionHint: document.querySelector("#selectionHint"),
   selectionText: document.querySelector("#selectionText"),
   settingsButton: document.querySelector("#settingsButton"),
-  errorSettingsButton: document.querySelector("#errorSettingsButton"),
+  sourcesList: document.querySelector("#sourcesList"),
+  sourcesSection: document.querySelector("#sourcesSection"),
   statusMessage: document.querySelector("#statusMessage"),
   statusText: document.querySelector("#statusText"),
 };
 
-let selectedText = "";
+let capture = null;
 
 elements.settingsButton.addEventListener("click", () => chrome.runtime.openOptionsPage());
 elements.errorSettingsButton.addEventListener("click", () => chrome.runtime.openOptionsPage());
 elements.resetButton.addEventListener("click", resetActiveState);
-elements.analyseButton.addEventListener("click", analyseSelection);
-elements.copyRewriteButton.addEventListener("click", copyRewrite);
+elements.analyseButton.addEventListener("click", () => analyseCapture());
+elements.analysePageButton.addEventListener("click", analyseCurrentPage);
 
 initialise();
 
@@ -45,83 +46,145 @@ async function initialise() {
   const preferences = await getPreferences();
   applyTheme(preferences.theme);
   followSystemTheme(() => preferences.theme);
-  const saved = await chrome.storage.local.get([ACTIVE_TEXT_KEY, ACTIVE_ANALYSIS_KEY]);
-  if (saved[ACTIVE_TEXT_KEY]) {
-    selectedText = saved[ACTIVE_TEXT_KEY];
-    showSelection();
-    if (saved[ACTIVE_ANALYSIS_KEY]) renderAnalysis(saved[ACTIVE_ANALYSIS_KEY]);
-    return;
+  const saved = await chrome.storage.local.get([ACTIVE_CAPTURE_KEY, ACTIVE_ANALYSIS_KEY, LEGACY_TEXT_KEY]);
+
+  if (saved[ACTIVE_CAPTURE_KEY]?.text) {
+    capture = saved[ACTIVE_CAPTURE_KEY];
+  } else if (saved[LEGACY_TEXT_KEY]) {
+    capture = { text: saved[LEGACY_TEXT_KEY], mode: "selection", source_url: null, source_title: null };
+    await chrome.storage.local.set({ [ACTIVE_CAPTURE_KEY]: capture });
+    await chrome.storage.local.remove(LEGACY_TEXT_KEY);
+  } else {
+    try {
+      capture = await readCurrentSelection();
+    } catch {
+      showStatus("Chrome does not allow text capture on this page. Try a normal webpage.", "error");
+    }
+    if (capture) await chrome.storage.local.set({ [ACTIVE_CAPTURE_KEY]: capture });
   }
 
-  try {
-    selectedText = await readCurrentSelection();
-  } catch {
-    showStatus("Chrome does not allow text capture on this page. Try a normal webpage.", "error");
-  }
-
-  if (!selectedText) return showEmptySelection();
-
-  await chrome.storage.local.set({ [ACTIVE_TEXT_KEY]: selectedText });
-  showSelection();
+  if (capture) showCapture();
+  else showEmptyCapture();
+  if (saved[ACTIVE_ANALYSIS_KEY]) renderAnalysis(saved[ACTIVE_ANALYSIS_KEY]);
 }
 
-function showSelection() {
+function showCapture() {
   elements.selectionHint.hidden = true;
-  elements.selectionText.textContent = selectedText;
-  elements.characterCount.textContent = `${selectedText.length.toLocaleString()} characters`;
-  elements.analyseButton.disabled = selectedText.length > MAX_TEXT_LENGTH;
-
-  if (selectedText.length > MAX_TEXT_LENGTH) {
-    showStatus(`Please select no more than ${MAX_TEXT_LENGTH.toLocaleString()} characters.`, "error");
-  }
+  elements.selectionHeading.textContent = capture.mode === "page" ? "Page text" : "Selected text";
+  elements.selectionText.textContent = capture.text;
+  elements.characterCount.textContent = `${capture.text.length.toLocaleString()} characters`;
+  elements.analyseButton.disabled = false;
 }
 
-function showEmptySelection() {
+function showEmptyCapture() {
+  elements.selectionHeading.textContent = "Selected text";
   elements.selectionHint.hidden = false;
+  elements.selectionHint.textContent = "Highlight text to analyse it, or analyse the readable text from this page.";
   elements.selectionText.replaceChildren();
   elements.characterCount.textContent = "";
   elements.analyseButton.disabled = true;
 }
 
 async function resetActiveState() {
-  await chrome.storage.local.remove([ACTIVE_TEXT_KEY, ACTIVE_ANALYSIS_KEY]);
-  selectedText = "";
+  await chrome.storage.local.remove([ACTIVE_CAPTURE_KEY, ACTIVE_ANALYSIS_KEY, LEGACY_TEXT_KEY]);
+  capture = null;
   elements.results.hidden = true;
   hideStatus();
   try {
-    selectedText = await readCurrentSelection();
+    capture = await readCurrentSelection();
   } catch {
     showStatus("Chrome cannot capture text on this page. Try a normal webpage.", "error");
   }
-  if (!selectedText) {
-    showEmptySelection();
-    showStatus("Reset complete. Highlight new text, then reopen Angleprobe or press Reset again.", "info");
+  if (!capture) {
+    showEmptyCapture();
+    showStatus("Reset complete. Highlight new text or choose Analyse page.", "info");
     return;
   }
-  await chrome.storage.local.set({ [ACTIVE_TEXT_KEY]: selectedText });
-  showSelection();
+  await chrome.storage.local.set({ [ACTIVE_CAPTURE_KEY]: capture });
+  showCapture();
 }
 
 async function readCurrentSelection() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) return "";
-
+  if (!tab?.id) return null;
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
     func: () => window.getSelection()?.toString().trim() ?? "",
   });
-  return results[0]?.result ?? "";
+  const text = results[0]?.result ?? "";
+  if (!text) return null;
+  return {
+    text,
+    mode: "selection",
+    source_url: tab.url ?? null,
+    source_title: tab.title ?? null,
+  };
 }
 
-async function analyseSelection() {
+async function readCurrentPage() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) return null;
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => {
+      const source = document.querySelector("article") ?? document.querySelector("main") ?? document.body;
+      if (!source) return "";
+      const clone = source.cloneNode(true);
+      clone.querySelectorAll([
+        "script", "style", "noscript", "template", "svg", "canvas", "iframe",
+        "nav", "footer", "form", "button", "input", "select", "textarea",
+        "[hidden]", "[aria-hidden='true']", "[role='navigation']", "[role='banner']",
+        "[role='contentinfo']", ".advertisement", ".ads", ".cookie-banner",
+      ].join(",")).forEach((element) => element.remove());
+      return (clone.innerText || clone.textContent || "")
+        .replace(/\u00a0/g, " ")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    },
+  });
+  const text = results[0]?.result ?? "";
+  if (!text) return null;
+  return {
+    text,
+    mode: "page",
+    source_url: tab.url ?? null,
+    source_title: tab.title ?? null,
+  };
+}
+
+async function analyseCurrentPage() {
   hideStatus();
-  setLoading(true);
+  setLoading(true, "Reading page…");
+  try {
+    const pageCapture = await readCurrentPage();
+    if (!pageCapture) {
+      showStatus("Angleprobe could not find readable text on this page.", "error");
+      return;
+    }
+    capture = pageCapture;
+    await chrome.storage.local.set({ [ACTIVE_CAPTURE_KEY]: capture });
+    await chrome.storage.local.remove(ACTIVE_ANALYSIS_KEY);
+    elements.results.hidden = true;
+    showCapture();
+    elements.analyseButton.querySelector(".button-label").textContent = "Analysing…";
+    await analyseCapture(true);
+  } catch {
+    showStatus("Chrome cannot read this page. Try a normal article or select a passage instead.", "error");
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function analyseCapture(alreadyLoading = false) {
+  if (!capture?.text) return;
+  hideStatus();
+  if (!alreadyLoading) setLoading(true);
   elements.results.hidden = true;
 
   try {
     const preferences = await getPreferences();
-    const body = await analyseWithOpenRouter({ text: selectedText }, preferences);
-
+    const body = await analyseWithOpenRouter(capture, preferences);
     await chrome.storage.local.set({ [ACTIVE_ANALYSIS_KEY]: body });
     renderAnalysis(body);
   } catch (error) {
@@ -131,7 +194,7 @@ async function analyseSelection() {
       showStatus("Angleprobe could not complete this analysis. Retry or choose another model.", "error", true);
     }
   } finally {
-    setLoading(false);
+    if (!alreadyLoading) setLoading(false);
   }
 }
 
@@ -140,12 +203,13 @@ function renderAnalysis(response) {
   elements.results.hidden = false;
   elements.overview.textContent = analysis.overview;
   renderAssessment(analysis.overall_assessment, analysis.issues.length);
-  renderSelectedText(analysis.issues);
+  renderHighlightedText(analysis.issues);
   renderIssues(analysis.issues);
   renderContext(analysis.missing_context);
-  renderRewrite(analysis.neutral_rewrite);
   renderLimitations(analysis.limitations);
-  elements.modelMeta.textContent = `Model: ${response.model?.id ?? "OpenRouter"}`;
+  renderSources(response.sources ?? []);
+  const verified = response.web_verification ? " · web verification enabled" : "";
+  elements.modelMeta.textContent = `Model: ${response.model?.id ?? "OpenRouter"}${verified}`;
 }
 
 function renderAssessment(assessment, issueCount) {
@@ -160,15 +224,13 @@ function renderAssessment(assessment, issueCount) {
   elements.issueCount.textContent = `${issueCount} issue${issueCount === 1 ? "" : "s"}`;
 }
 
-function renderSelectedText(issues) {
+function renderHighlightedText(issues) {
+  if (!capture?.text) return;
   const ranges = issues
     .map((issue) => issue.location)
     .filter((location) =>
-      Number.isInteger(location?.start) &&
-      Number.isInteger(location?.end) &&
-      location.start >= 0 &&
-      location.end > location.start &&
-      location.end <= selectedText.length
+      Number.isInteger(location?.start) && Number.isInteger(location?.end) &&
+      location.start >= 0 && location.end > location.start && location.end <= capture.text.length
     )
     .sort((left, right) => left.start - right.start);
 
@@ -176,24 +238,22 @@ function renderSelectedText(issues) {
   let cursor = 0;
   for (const range of ranges) {
     if (range.start < cursor) continue;
-    elements.selectionText.append(document.createTextNode(selectedText.slice(cursor, range.start)));
+    elements.selectionText.append(document.createTextNode(capture.text.slice(cursor, range.start)));
     const mark = document.createElement("mark");
-    mark.textContent = selectedText.slice(range.start, range.end);
+    mark.textContent = capture.text.slice(range.start, range.end);
     elements.selectionText.append(mark);
     cursor = range.end;
   }
-  elements.selectionText.append(document.createTextNode(selectedText.slice(cursor)));
+  elements.selectionText.append(document.createTextNode(capture.text.slice(cursor)));
 }
 
 function renderIssues(issues) {
   elements.issuesList.replaceChildren();
   elements.issuesSection.hidden = issues.length === 0;
-
   for (const issue of issues) {
     const card = createCard("issue-card");
     const topline = document.createElement("div");
     topline.className = "issue-topline";
-
     const dot = document.createElement("span");
     dot.className = `issue-dot ${issue.type}`;
     const type = document.createElement("span");
@@ -203,7 +263,6 @@ function renderIssues(issues) {
     severity.className = "severity";
     severity.textContent = `${issue.severity} severity`;
     topline.append(dot, type, severity);
-
     const quote = document.createElement("p");
     quote.className = "issue-quote";
     quote.textContent = `“${issue.quote}”`;
@@ -229,12 +288,6 @@ function renderContext(items) {
   }
 }
 
-function renderRewrite(rewrite) {
-  elements.rewriteSection.hidden = rewrite === null;
-  elements.neutralRewrite.textContent = rewrite ?? "";
-  elements.copyRewriteButton.textContent = "Copy";
-}
-
 function renderLimitations(limitations) {
   elements.limitationsList.replaceChildren();
   elements.limitationsSection.hidden = limitations.length === 0;
@@ -245,10 +298,19 @@ function renderLimitations(limitations) {
   }
 }
 
-async function copyRewrite() {
-  await navigator.clipboard.writeText(elements.neutralRewrite.textContent);
-  elements.copyRewriteButton.textContent = "Copied";
-  setTimeout(() => { elements.copyRewriteButton.textContent = "Copy"; }, 1_400);
+function renderSources(sources) {
+  elements.sourcesList.replaceChildren();
+  elements.sourcesSection.hidden = sources.length === 0;
+  for (const source of sources) {
+    const item = document.createElement("li");
+    const link = document.createElement("a");
+    link.href = source.url;
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    link.textContent = source.title;
+    item.append(link);
+    elements.sourcesList.append(item);
+  }
 }
 
 function createCard(className) {
@@ -265,11 +327,12 @@ function formatIssueType(type) {
   }[type] ?? "Issue";
 }
 
-function setLoading(loading) {
-  elements.analyseButton.disabled = loading || !selectedText || selectedText.length > MAX_TEXT_LENGTH;
+function setLoading(loading, label = "Analysing…") {
+  elements.analyseButton.disabled = loading || !capture?.text;
+  elements.analysePageButton.disabled = loading;
   elements.resetButton.disabled = loading;
   elements.analyseButton.classList.toggle("loading", loading);
-  elements.analyseButton.querySelector(".button-label").textContent = loading ? "Analysing…" : "Analyse selection";
+  elements.analyseButton.querySelector(".button-label").textContent = loading ? label : "Analyse text";
 }
 
 function showStatus(message, kind, showSettings = false) {

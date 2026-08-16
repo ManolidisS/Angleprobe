@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Angleprobe",
-  "version": "0.3.0",
-  "description": "Analyse highlighted text for framing, statistical issues, and missing context using your own OpenRouter key.",
+  "version": "0.4.0",
+  "description": "Analyse selected text or a full page for framing, statistical issues, and missing context using your OpenRouter key.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["https://openrouter.ai/*"],
   "action": {

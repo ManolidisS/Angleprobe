@@ -12,9 +12,9 @@ Analyse highlighted text for framing, statistical issues, unsupported implicatio
 
 Angleprobe helps readers inspect the language and claims in text they choose. Highlight a passage, open Angleprobe, and request a structured analysis using your own OpenRouter API key.
 
-Angleprobe can identify loaded wording, statistical caveats, potential factual claims worth checking, and useful missing context. When appropriate, it proposes a more neutral rewrite and audits that rewrite before showing it.
+Angleprobe can identify loaded wording, statistical caveats, potential factual claims worth checking, and useful missing context. It can analyse a selected passage or extract the readable text from the current page.
 
-Features include persistent results, a Reset button, light and dark themes, a live compatible-model selector, model-specific reasoning controls, and an optional zero-data-retention requirement enabled by default.
+Features include persistent results, a Reset button, light and dark themes, a live compatible-model selector, model-specific reasoning controls, an optional zero-data-retention requirement enabled by default, and optional OpenRouter web search/fetch verification with source links.
 
 Angleprobe is open source. It has no Angleprobe backend, accounts, subscriptions, advertising, or analytics.
 

@@ -32,7 +32,7 @@
           <span id="characterCount" class="character-count"></span>
         </div>
         <div id="selectionText" class="selection-text" aria-live="polite"></div>
-        <p id="selectionHint" class="selection-hint">Highlight text on a webpage, then open Angleprobe.</p>
+        <p id="selectionHint" class="selection-hint">Highlight text to analyse it, or analyse the readable text from this page.</p>
       </section>
 
       <div id="statusMessage" class="status-message" role="status" aria-live="polite">
@@ -41,10 +41,13 @@
         <button id="errorSettingsButton" class="status-action" type="button" hidden>Settings</button>
       </div>
 
-      <button id="analyseButton" class="primary-button" type="button" disabled>
-        <span class="button-label">Analyse selection</span>
-        <span class="spinner" aria-hidden="true"></span>
-      </button>
+      <div class="action-row">
+        <button id="analyseButton" class="primary-button" type="button" disabled>
+          <span class="button-label">Analyse text</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+        <button id="analysePageButton" class="secondary-button" type="button">Analyse page</button>
+      </div>
 
       <section id="results" class="results" hidden>
         <div class="result-summary card">
@@ -65,11 +68,10 @@
           <div id="contextList" class="stack"></div>
         </div>
 
-        <div id="rewriteSection" class="result-section" hidden>
-          <h2>More neutral wording</h2>
-          <div class="rewrite-card card">
-            <p id="neutralRewrite"></p>
-            <button id="copyRewriteButton" class="text-button" type="button">Copy</button>
+        <div id="sourcesSection" class="result-section" hidden>
+          <h2>Sources consulted</h2>
+          <div class="sources-card card">
+            <ul id="sourcesList"></ul>
           </div>
         </div>
 
